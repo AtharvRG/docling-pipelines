@@ -182,8 +182,8 @@ export function VectorDBPanelBody({
   // Connection & Settings fields for OpenSearch
   const opensearchHost = (parsedSavedConfig.host as string | undefined) ?? 'localhost';
   const opensearchPort = parsedSavedConfig.port !== undefined && parsedSavedConfig.port !== null ? String(parsedSavedConfig.port) : '9200';
-  const opensearchUseSsl = (parsedSavedConfig.use_ssl as boolean | undefined) ?? true;
-  const opensearchVerifyCerts = (parsedSavedConfig.verify_certs as boolean | undefined) ?? true;
+  const opensearchUseSsl = (parsedSavedConfig.use_ssl as boolean | undefined) ?? false;
+  const opensearchVerifyCerts = (parsedSavedConfig.verify_certs as boolean | undefined) ?? false;
 
   // Auth fields for OpenSearch
   const opensearchUsername = (parsedSavedConfig.username as string | undefined) ?? '';
@@ -244,6 +244,38 @@ export function VectorDBPanelBody({
     return Object.keys(filtered).length > 0 ? JSON.stringify(filtered, null, 2) : '';
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providerConfig, provider]);
+
+  // Merge display-side defaults into parsedSavedConfig for the enrichment API.
+  // Untouched fields (host, port, use_ssl, etc.) are absent from parsedSavedConfig
+  // but the backend still needs them — explicit saves always win.
+  const resolvedProviderConfig = useMemo<Record<string, unknown>>(() => {
+    if (provider === VECTORDB_PROVIDERS.OPENSEARCH) {
+      const defaults: Record<string, unknown> = {
+        host: opensearchHost,
+        port: Number(opensearchPort),
+        use_ssl: opensearchUseSsl,
+      };
+      if (opensearchUseSsl) {
+        defaults.verify_certs = opensearchVerifyCerts;
+      }
+      // parsedSavedConfig spreads last so explicit saves always override defaults.
+      return { ...defaults, ...parsedSavedConfig };
+    }
+    if (provider === VECTORDB_PROVIDERS.MILVUS) {
+      const defaults: Record<string, unknown> = {
+        auth_type: milvusAuthType,
+        database: milvusDatabase,
+        secure: milvusSecure,
+      };
+      if (milvusAuthType !== 'uri') {
+        defaults.host = milvusHost;
+        defaults.port = Number(milvusPort);
+      }
+      return { ...defaults, ...parsedSavedConfig };
+    }
+    return parsedSavedConfig;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider, parsedSavedConfig]);
 
   // ── Required param validation ─────────────────────────────────────────────
   const validate = getRequiredParamValidator(nodeAttributes);
@@ -738,7 +770,7 @@ export function VectorDBPanelBody({
         currentFeatureMappings={featureMappings}
         pipelineFlow={pipelineFlow}
         nodeId={currentNodeId}
-        parsedProviderConfig={parsedSavedConfig}
+        parsedProviderConfig={resolvedProviderConfig}
         vectorSimilarityOptions={vectorSimilarityOptions}
         savedVectorSimilarity={savedVectorSimilarity}
         engineOptions={engineOptions}
