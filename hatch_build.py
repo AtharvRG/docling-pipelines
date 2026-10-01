@@ -24,6 +24,7 @@ class CustomBuildHook(BuildHookInterface):
         # Run the build script
         build_script = Path(__file__).parent / "scripts" / "build_frontend.py"
 
-        result = subprocess.run([sys.executable, str(build_script)], text=True)
-        if result.returncode != 0:
-            raise RuntimeError("Frontend build failed — see output above for details")
+        try:
+            subprocess.run([sys.executable, str(build_script)], text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("Frontend build failed — see output above for details") from e
