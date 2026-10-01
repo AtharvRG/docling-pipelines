@@ -656,7 +656,7 @@ export function VectorDBPanelBody({
                     }}
                   />
                 </div>
-                {(milvusAuthType === 'standalone' || milvusAuthType === 'grpc') && (
+                {(milvusAuthType === 'standalone' || milvusAuthType === 'grpc' || milvusAuthType === 'token') && (
                   <div className={common.formField}>
                     <TextInput
                       id="milvus-username"
