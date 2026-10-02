@@ -11,6 +11,8 @@ Versioning follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- **`@staticmethod` conversion for per-document hot paths (issue #127)** — Converted 18 instance methods that never read `self` into `@staticmethod` across four modules, eliminating a bound-method allocation per call in per-document code paths: 14 formula methods in `ReadabilityMetrics` (`get_words`, `count_characters`, `flesch_reading_ease`, `flesch_kincaid_grade`, `gunning_fog`, `smog_index`, `coleman_liau_index`, `automated_readability_index`, `dale_chall_readability_score`, `difficult_words`, `text_standard`, `spache_readability`, `mcalpine_eflaw`, `reading_time`), `JobReportGenerator._get_timestamp_from_modified_time` and `JobReportGenerator._create_doc_entry`, `EmbeddingsOperator._generate_document_hash`, and `DuckDBTableStorage._pyarrow_to_duckdb_type`. `linsear_write_formula` remains an instance method because it delegates to `count_syllables`, which uses the per-instance Pyphen dictionary. No logic changes; all call sites continue to work unchanged because Python resolves staticmethods transparently through instances.
+
 - **`PIIAndHAPAnnotator` — decorator-based adapter registry** — Replaced the `if/elif` provider chain in `PIIHAPService` with a `PIIAndHAPDetectionFactory` backed by a `@register_pii_and_hap_detection_adapter` decorator. Each provider adapter (`WatsonxPIIAndHAPAdapter`, `LiteLLMPIIAndHAPAdapter`) now self-registers at import time and fully encapsulates its own detection path behind `PIIAndHAPDetectionPort`. `PIIHAPService` is reduced to a thin wrapper that receives an adapter via constructor injection — no provider branching, no `use_specialized_api` flag. Adding a new provider is now a single-file change.
 
 ### Fixed
