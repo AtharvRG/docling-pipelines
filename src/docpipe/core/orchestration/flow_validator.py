@@ -989,13 +989,13 @@ class FlowValidator:
             dag: List of operator definitions
             validate_results: Container for validation results
         """
-        graph = self._build_graph(dag)
+        graph = self._build_graph(dag=dag)
         undirected = self._make_undirected_graph(graph)
         components = self._find_connected_components(undirected)
 
         id_to_index = {n["id"]: i for i, n in enumerate(dag)}
         reported_nodes: set[str] = set()
-        reverse_graph: dict[str, list[str]] = self._build_reverse_graph(dag)
+        reverse_graph: dict[str, list[str]] = self._build_reverse_graph(dag=dag)
 
         if len(components) > 1:
             self._validate_disconnected_components(
@@ -1016,7 +1016,7 @@ class FlowValidator:
         )
 
     @staticmethod
-    def _build_reverse_graph(dag: list) -> dict:
+    def _build_reverse_graph(*, dag: list) -> dict:
         """Build reverse graph to find nodes without inputs."""
         reverse_graph: dict[str, list[str]] = {n["id"]: [] for n in dag}
         for node in dag:
@@ -1038,7 +1038,7 @@ class FlowValidator:
     ):
         """Validate disconnected components and report terminal nodes that are not VectorDB operators."""
         for component in components:
-            terminal_node_id = self._find_terminal_node(component, graph)
+            terminal_node_id = self._find_terminal_node(component=component, graph=graph)
             if terminal_node_id is None:
                 continue
 
@@ -1051,7 +1051,7 @@ class FlowValidator:
             )
 
     @staticmethod
-    def _find_terminal_node(component: set, graph: dict) -> str | None:
+    def _find_terminal_node(*, component: set, graph: dict) -> str | None:
         """Find the terminal node (node with no outgoing edges) in a component."""
         for node_id in component:
             if not graph.get(node_id, []):
@@ -1289,7 +1289,7 @@ class FlowValidator:
                 )
 
     @staticmethod
-    def _build_graph(dag: list) -> dict:
+    def _build_graph(*, dag: list) -> dict:
         """Build a directed graph representation from the DAG.
 
         Args:
@@ -1389,7 +1389,7 @@ class FlowValidator:
         if not dag:
             return
 
-        graph = self._build_graph(dag)
+        graph = self._build_graph(dag=dag)
         id_to_index = {node["id"]: i for i, node in enumerate(dag)}
 
         for terminal_node_id in self._find_all_terminal_nodes(graph):
@@ -1417,7 +1417,7 @@ class FlowValidator:
             dag: List of operator definitions
             validate_results: Container for validation results
         """
-        graph = self._build_graph(dag)
+        graph = self._build_graph(dag=dag)
         visited = set()
         rec_stack = set()
 
@@ -1569,7 +1569,7 @@ class FlowValidator:
         return category
 
     @staticmethod
-    def create_validation_alerts(op_def: dict, messages: list, alerts: list, **kwargs):
+    def create_validation_alerts(*, op_def: dict, messages: list, alerts: list, **kwargs):
         """Create validation alerts from a list of messages.
 
         Args:
@@ -1594,7 +1594,9 @@ class FlowValidator:
         return [item for item in set(nodes) if nodes.count(item) > 1]
 
     @staticmethod
-    def _evaluate_node_validation_skip(operator: str, operator_factory: OperatorFactory, global_config: dict) -> bool:
+    def _evaluate_node_validation_skip(
+        *, operator: str, operator_factory: OperatorFactory, global_config: dict
+    ) -> bool:
         """Evaluate whether to skip validation for a custom operator.
 
         Args:

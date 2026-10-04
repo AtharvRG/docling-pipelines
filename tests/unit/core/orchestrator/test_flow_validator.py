@@ -226,7 +226,7 @@ class TestFlowValidator:
             {"id": "node3", DocpipeConstants.OUTPUT_EDGES: []},
         ]
 
-        result = validator._build_graph(dag)
+        result = validator._build_graph(dag=dag)
 
         assert result["node1"] == ["node2"]
         assert result["node2"] == ["node3"]
@@ -1714,7 +1714,7 @@ class TestFlowValidatorStaticMethods:
             {"id": "b", "output_edges": []},
         ]
 
-        graph = FlowValidator._build_graph(dag)
+        graph = FlowValidator._build_graph(dag=dag)
 
         assert graph == {"a": ["b"], "b": []}
 

@@ -455,7 +455,7 @@ class JobReportGenerator:
                 return modified_time
             return ""
         except Exception as e:
-            logger.debug(f"Could not convert timestamp for doc {doc_id}: {e}")
+            logger.debug("Could not convert timestamp for doc %s: %s", doc_id, e)
             return ""
 
     @staticmethod
