@@ -483,6 +483,7 @@ class IngestSourceOperator(AbstractOperator):
 
     def _process_doc_batch(
         self,
+        *,
         batch: list[Document],
         total_fetched: int,
         metadata: dict[str, Any],
@@ -528,14 +529,13 @@ class IngestSourceOperator(AbstractOperator):
         Returns:
             List of document dictionaries
         """
-        if SourceAdapterFactory.is_registered(self.provider):
-            return self._process_documents_from_adapter(metadata)
-
         doc_data: list[dict[str, Any]] = []
         total_fetched = 0
 
         try:
             logger.info("Loading documents from %s", self.provider, extra=self.common_log_arguments)
+            if SourceAdapterFactory.is_registered(self.provider):
+                return self._process_documents_from_adapter(metadata)
             documents = self._get_document_iterator()
 
             while len(doc_data) < self.max_files:
@@ -556,7 +556,13 @@ class IngestSourceOperator(AbstractOperator):
                     total_fetched,
                     extra=self.common_log_arguments,
                 )
-                self._process_doc_batch(batch, total_fetched, metadata, doc_data, self.max_files)
+                self._process_doc_batch(
+                    batch=batch,
+                    total_fetched=total_fetched,
+                    metadata=metadata,
+                    doc_data=doc_data,
+                    max_limit=self.max_files,
+                )
 
             logger.info(
                 "Fetched %d documents, processed %d new documents from %s",
@@ -601,13 +607,14 @@ class IngestSourceOperator(AbstractOperator):
         """Run an async coroutine safely in synchronous execution context."""
         try:
             asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(async_coro)
+        else:
             import concurrent.futures
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(asyncio.run, async_coro)
                 future.result()
-        except RuntimeError:
-            asyncio.run(async_coro)
 
     def _process_documents_from_adapter(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         """
@@ -645,7 +652,13 @@ class IngestSourceOperator(AbstractOperator):
                         total_fetched,
                         extra=self.common_log_arguments,
                     )
-                    self._process_doc_batch(batch, total_fetched, metadata, doc_data, self.max_files)
+                    self._process_doc_batch(
+                        batch=batch,
+                        total_fetched=total_fetched,
+                        metadata=metadata,
+                        doc_data=doc_data,
+                        max_limit=self.max_files,
+                    )
                     batch.clear()
                     if len(doc_data) >= self.max_files:
                         return
@@ -657,7 +670,13 @@ class IngestSourceOperator(AbstractOperator):
                     total_fetched,
                     extra=self.common_log_arguments,
                 )
-                self._process_doc_batch(batch, total_fetched, metadata, doc_data, self.max_files)
+                self._process_doc_batch(
+                    batch=batch,
+                    total_fetched=total_fetched,
+                    metadata=metadata,
+                    doc_data=doc_data,
+                    max_limit=self.max_files,
+                )
 
         self._run_async_generator_in_sync_context(process_async_generator())
 
@@ -703,7 +722,7 @@ class IngestSourceOperator(AbstractOperator):
         return adapter, config
 
     @staticmethod
-    def _extract_file_extension(doc_metadata: dict[str, Any], doc_name: str) -> str:
+    def _extract_file_extension(*, doc_metadata: dict[str, Any], doc_name: str) -> str:
         """Extract and normalize file extension from metadata or document name."""
         file_extension: str = doc_metadata.get("extension", "")
         if not file_extension:
@@ -713,9 +732,9 @@ class IngestSourceOperator(AbstractOperator):
         return file_extension
 
     @staticmethod
-    def _parse_modified_time(raw_time: int | str) -> int:
-        """Parse modification timestamp from int or ISO string."""
-        if isinstance(raw_time, int):
+    def _parse_modified_time(raw_time: int | float | str | None) -> int | float:
+        """Preserve numeric timestamps for comparison, or parse an ISO string."""
+        if isinstance(raw_time, (int, float)):
             return raw_time
         if isinstance(raw_time, str):
             try:
@@ -726,7 +745,7 @@ class IngestSourceOperator(AbstractOperator):
                 return 0
         return 0
 
-    def _should_skip_extension(self, file_extension: str, source: str, metadata: dict[str, Any]) -> bool:
+    def _should_skip_extension(self, *, file_extension: str, source: str, metadata: dict[str, Any]) -> bool:
         """Check if document should be skipped based on extension filters."""
         if self.excluded_extensions and file_extension in self.excluded_extensions:
             logger.info("Skipping document based on exclusion filter: %s", source, extra=self.common_log_arguments)
@@ -760,8 +779,8 @@ class IngestSourceOperator(AbstractOperator):
             source: str = doc.metadata.get("source", f"unknown_{idx}")
             doc_name: str = doc.metadata.get("name", source)
 
-            file_extension = self._extract_file_extension(doc.metadata, doc_name)
-            if self._should_skip_extension(file_extension, source, metadata):
+            file_extension = self._extract_file_extension(doc_metadata=doc.metadata, doc_name=doc_name)
+            if self._should_skip_extension(file_extension=file_extension, source=source, metadata=metadata):
                 return None
 
             doc_id: str = hashlib.md5(source.encode(), usedforsecurity=False).hexdigest()
@@ -788,7 +807,7 @@ class IngestSourceOperator(AbstractOperator):
                 "metadata": json.dumps(doc.metadata),
                 "source_id": source_id,
                 "path": source,
-                "modified_time": modified_time,
+                "modified_time": modified_time if isinstance(modified_time, int) else 0,
             }
 
             logger.info(

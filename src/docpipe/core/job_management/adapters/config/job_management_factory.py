@@ -382,9 +382,16 @@ class JobManagementFactory:
         framework_config = job_mgmt_config.get(DocpipeConfigKeys.FRAMEWORK, {}) or {}
         store_config = job_mgmt_config.get(DocpipeConfigKeys.STORE, {}) or {}
 
-        storage_backend = cls._resolve_storage_backend(store_config, job_mgmt_config, global_storage_config)
-        framework_type = cls._resolve_framework_type(framework_config, job_mgmt_config)
-        merged_config = cls._merge_config_dict(global_storage_config, job_mgmt_config, store_config, framework_config)
+        storage_backend = cls._resolve_storage_backend(
+            store_config=store_config, job_mgmt_config=job_mgmt_config, global_storage_config=global_storage_config
+        )
+        framework_type = cls._resolve_framework_type(framework_config=framework_config, job_mgmt_config=job_mgmt_config)
+        merged_config = cls._merge_config_dict(
+            global_storage_config=global_storage_config,
+            job_mgmt_config=job_mgmt_config,
+            store_config=store_config,
+            framework_config=framework_config,
+        )
 
         config_source = (
             "service-specific"
@@ -404,6 +411,7 @@ class JobManagementFactory:
     @classmethod
     def _resolve_storage_backend(
         cls,
+        *,
         store_config: dict[str, Any],
         job_mgmt_config: dict[str, Any],
         global_storage_config: dict[str, Any],
@@ -426,6 +434,7 @@ class JobManagementFactory:
     @classmethod
     def _resolve_framework_type(
         cls,
+        *,
         framework_config: dict[str, Any],
         job_mgmt_config: dict[str, Any],
     ) -> FrameworkType:
@@ -443,6 +452,7 @@ class JobManagementFactory:
     @classmethod
     def _merge_config_dict(
         cls,
+        *,
         global_storage_config: dict[str, Any],
         job_mgmt_config: dict[str, Any],
         store_config: dict[str, Any],

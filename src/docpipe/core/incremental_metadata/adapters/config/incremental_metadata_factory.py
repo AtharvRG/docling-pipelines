@@ -237,7 +237,7 @@ def register_incremental_update_store(
 # ---------------------------------------------------------------------------
 
 
-def _extract_storage_block(config_dict: dict[str, Any], key: str) -> dict[str, Any]:
+def _extract_storage_block(config_dict: dict[str, Any]) -> dict[str, Any]:
     """Extract and merge config dictionary and optional postgres block from section."""
     block: dict[str, Any] = {}
     if not config_dict:
@@ -266,8 +266,8 @@ def _resolve_backend_and_config(*, yaml_config: dict[str, Any]) -> tuple[str, di
         raise DocpipeException(f"Invalid storage backend '{backend}' for incremental metadata. Available: {available}")
 
     # Merge config: global_storage base, overridden by service-specific block.
-    merged = _extract_storage_block(global_storage_config, DocpipeConfigKeys.GLOBAL_STORAGE)
-    merged.update(_extract_storage_block(storage_config, DocpipeConfigKeys.STORAGE))
+    merged = _extract_storage_block(global_storage_config)
+    merged.update(_extract_storage_block(storage_config))
     if DocpipeConfigKeys.POSTGRES in incremental_config:
         merged[DocpipeConfigKeys.POSTGRES] = incremental_config[DocpipeConfigKeys.POSTGRES]
 
