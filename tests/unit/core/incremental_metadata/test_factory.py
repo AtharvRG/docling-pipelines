@@ -1,6 +1,7 @@
 """Tests for IncrementalMetadataFactory."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -196,7 +197,7 @@ def test_postgres_config_precedence(*, service_postgres):
     """Service PostgreSQL settings override storage settings and global defaults."""
     from copy import deepcopy
 
-    config = {
+    config: dict[str, Any] = {
         "global_storage": {
             "type": "postgresql",
             "config": {"lock_timeout": 10, "base_dir": "global"},
